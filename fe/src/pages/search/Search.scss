@@ -1,0 +1,301 @@
+.search-input {
+  .ant-input {
+    border-radius: 8px;
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+  }
+
+  .ant-input-group-addon {
+    background-color: #01428E;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .ant-table-row:hover {
+    background-color: #e6f7ff !important;
+  }
+  
+  .ant-table-cell {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  .title-cell {
+    font-weight: bold;
+    color: #1d39c4;
+  }
+  
+}
+
+.search-container {
+  padding: 20px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .user-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    font-size: 1.5em;
+
+    &.vip {
+      color:  #01428E;
+    }
+
+    &.normal {
+      color: gray;
+    }
+  }
+
+  .content {
+    text-align: center;
+
+    h1 {
+      color: #333;
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #666;
+    }
+  }
+}
+
+.searchbar-container {
+  margin: 2%;
+  display: flex;
+  justify-content: center;
+  justify-content: space-between;
+
+  .search {
+    display: flex;
+    width: 50%;
+  }
+
+  .search-input {
+    border-radius: 20px;
+    height: 45px;
+    box-shadow: 0 2px 4px hwb(224 29% 2% / 0.4);
+  }
+
+  .search-button {
+    margin-left: 10px;
+    height: 45px;
+    border-radius: 20px;
+    background-color: #01428E;
+  }
+
+  .stats {
+    height: 45px;
+    width: 300px;
+  }
+}
+
+.translate-container {
+  display: flex;
+  justify-content: space-between;
+
+  .translate {
+    width: 60%;
+
+    .vip-translation {
+      margin-bottom: 1.5rem;
+    }
+
+    .vip-translation-card {
+      background: linear-gradient(to right, #fffbec, #fff6d8);
+      border: 1px solid #ffebc8;
+
+      .vip-title {
+        display: flex;
+        gap: 0.5rem;
+
+        .vip-icon {
+          color: #ffcc00;
+        }
+
+        span {
+          color: #b48c00;
+          font-weight: bold;
+        }
+      }
+
+      .vip-content {
+        display: flex;
+        gap: 1.5rem;
+
+        .vip-section {
+          flex: 1;
+
+          .label {
+            display: block;
+            color: #666;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+          }
+
+          .content {
+            color: #333;
+          }
+        }
+      }
+    }
+
+    // Loading Section
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 8rem 0;
+    }
+
+    // No Results Section
+    .no-results-container {
+      padding: 8rem 0;
+    }
+
+    .no-results-text {
+      color: #999;
+      font-size: 1.25rem;
+    }
+
+    // Search Table Section
+    .search-table {
+      border-radius: 0.5rem;
+      overflow: hidden;
+
+      .table-row {
+        &:hover {
+          background-color: #f0f8ff;
+          transition: background-color 0.2s ease-in-out;
+        }
+      }
+    }
+  }
+
+  .refresh button {
+    margin-top: 20%;
+    margin-bottom: 10%;
+    margin-right: 40px;
+    height: 45px;
+    border-radius: 10px;
+    background-color: #01428E;
+  }
+
+  .modal-section{
+    color: #4caf50
+
+  }
+}
+
+.description{
+  color: #c00202;
+  font-size: 1.1em;
+}
+
+.about-it{
+  color: #c00202;
+  font-size: 1.1em;
+}
+
+.table-container {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.ant-table-tbody > tr:hover {
+  background-color: #f5f5f5;
+}
+
+.ant-rate {
+  color: #faad14;
+}
+
+.ant-tooltip-inner {
+  font-size: 12px;
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
+.ant-table {
+  .ant-table-thead > tr > th {
+    background-color: #01428E;
+    color: white;
+    font-weight: bold;
+  }
+}
+
+.custom-modal .modal-card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #f0f2f5;
+  padding: 20px;
+}
+
+.modal-image {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-bottom: 15px;
+}
+
+.modal-title {
+  margin: 0;
+  font-weight: bold;
+  text-align: center;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-details {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modal-description p {
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: center;
+  padding: 10px 20px;
+  background-color: #fafafa;
+  border-top: 1px solid #f0f0f0;
+}
+
+
+// Animation classes
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}

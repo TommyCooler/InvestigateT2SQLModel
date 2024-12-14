@@ -1,0 +1,18 @@
+.ant-table {
+    .ant-table-thead>tr>th {
+        background-color: #2626a7;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .ant-table-tbody>tr>td {
+        text-align: center;
+        padding: 12px;
+    }
+
+    .ant-table-pagination {
+        margin-top: 20px;
+        justify-content: center; 
+    }
+}
