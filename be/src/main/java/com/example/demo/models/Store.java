@@ -16,9 +16,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-@Table(name="store")
+@Table(name="stores")
 
 public class Store {
+    
+  @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // ID tự động tăng (giả định)
     private Long Store_ID;
 

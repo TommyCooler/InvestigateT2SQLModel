@@ -16,7 +16,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-@Table(name = "product")  // Tên bảng trong cơ sở dữ liệu
+@Table(name = "laptops")  // Tên bảng trong cơ sở dữ liệu
 public class Product {
 
     @Id
@@ -46,9 +46,6 @@ public class Product {
 
     @Column(name="SSD", length=20)
     private String SSD;
-
-    @Column(name="Graphics_card", length=20)
-    private String Graphics_card;
 
     @Column(name="Description", columnDefinition = "TEXT")
     private String Description;
