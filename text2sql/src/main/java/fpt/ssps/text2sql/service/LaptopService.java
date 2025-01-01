@@ -21,7 +21,7 @@ public class LaptopService implements ILaptopService{
 
     
     public List<Laptop> searchLaptops(String keyword) {
-        return laptopRepository.findByTitleContainingIgnoreCase(keyword);
+        return laptopRepository.findByTypeContainingIgnoreCase(keyword);
     }
 
     public Laptop getById(Long id){
