@@ -8,13 +8,15 @@ import com.google.cloud.translate.TranslateOptions;
 import com.google.cloud.translate.Translation;
 
 import fpt.ssps.text2sql.model.response.GoogleTranslationResponse;
+import fpt.ssps.text2sql.service.iservice.IGoogleTranslationService;
 
 @Service
-public class GoogleTranslationService {
+public class GoogleTranslationService implements IGoogleTranslationService{
 
     @Value("${google.project.key}")
     private String apiKey;
 
+    @Override
     public GoogleTranslationResponse translate(String text, String targetLanguage) {
         // Tạo một đối tượng Translate
         Translate translate = TranslateOptions.newBuilder()

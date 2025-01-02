@@ -9,6 +9,6 @@ import java.util.List;
 
 @Repository
 public interface LaptopRepository extends JpaRepository<Laptop, Long> {
-    List<Laptop> findByTypeContainingIgnoreCase(String keyword);
+    List<Laptop> findByNameContainingIgnoreCase(String keyword);
 }
 

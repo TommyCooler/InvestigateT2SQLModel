@@ -1,4 +1,6 @@
 package fpt.ssps.text2sql.service;
 
-public class StoreLaptopService {
+import fpt.ssps.text2sql.service.iservice.IStoreLaptopService;
+
+public class StoreLaptopService implements IStoreLaptopService{
 }

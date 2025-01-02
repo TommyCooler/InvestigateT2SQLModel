@@ -3,8 +3,8 @@ package fpt.ssps.text2sql.controller;
 import fpt.ssps.text2sql.model.Laptop;
 import fpt.ssps.text2sql.model.response.GoogleTranslationRequest;
 import fpt.ssps.text2sql.service.GoogleTranslationService;
-import fpt.ssps.text2sql.service.ILaptopService;
 import fpt.ssps.text2sql.service.PythonApiService;
+import fpt.ssps.text2sql.service.iservice.ILaptopService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
