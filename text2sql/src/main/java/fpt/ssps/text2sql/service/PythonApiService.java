@@ -4,12 +4,15 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import fpt.ssps.text2sql.service.iservice.IPythonApiService;
+
 
 @Service
-public class PythonApiService {
+public class PythonApiService implements IPythonApiService{
 
     private final String pythonApiUrl = "http://localhost:5000/generate_sql";  // URL đến Python API
 
+    @Override
     public String generateSQLQuery(String queryCondition) {
         // Tạo đối tượng RestTemplate để gọi API Python
         RestTemplate restTemplate = new RestTemplate();

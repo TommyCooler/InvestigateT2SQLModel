@@ -2,6 +2,8 @@ package fpt.ssps.text2sql.service;
 
 import fpt.ssps.text2sql.model.Laptop;
 import fpt.ssps.text2sql.repo.LaptopRepository;
+import fpt.ssps.text2sql.service.iservice.ILaptopService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,24 +16,26 @@ public class LaptopService implements ILaptopService{
     @Autowired
     private LaptopRepository laptopRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @Override
     public List<Laptop> getLaptops() {
         return laptopRepository.findAll();
     }
 
-    
+    @Override
     public List<Laptop> searchLaptops(String keyword) {
-        return laptopRepository.findByTypeContainingIgnoreCase(keyword);
+        return laptopRepository.findByNameContainingIgnoreCase(keyword);
     }
 
+    @Override
     public Laptop getById(Long id){
         return laptopRepository.findById(id).get();
     }
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     // Tìm sản phẩm theo câu SQL
+    @Override
     public List<Laptop> searchLaptopsBySQL(String sqlQuery) {
         System.out.println(sqlQuery);
         String sqlClean = extractSqlQuery1(sqlQuery);
