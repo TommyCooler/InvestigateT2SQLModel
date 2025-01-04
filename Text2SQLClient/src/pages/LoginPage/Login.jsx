@@ -14,7 +14,7 @@ function LoginCustomer() {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:8080/login", {
+      const response = await axios.post("http://localhost:8080/user/login", {
         username: values.username,
         password: values.password,
       });

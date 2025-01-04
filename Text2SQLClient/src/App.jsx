@@ -8,6 +8,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Search />} />
         <Route path="/login" element={<Login />} />
+
       </Routes>
     </BrowserRouter>
   );

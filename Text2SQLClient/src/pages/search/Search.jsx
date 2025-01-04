@@ -1,131 +1,49 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { motion } from "framer-motion";
-import {
-  Table,
-  Input,
-  Button,
-  Typography,
-  Card,
-  Spin,
-  Empty,
-  notification,
-  Badge,
-  Tag,
-  Statistic,
-  Modal,
-  message,
-  Rate,
-} from "antd";
-import {
-  SearchOutlined,
-  ShoppingOutlined,
-  StarFilled,
-  DollarCircleOutlined,
-  ReloadOutlined,
-  LoginOutlined,
-  LogoutOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
-import "./Search.scss";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import './Search.scss';
 
-const { Title, Text } = Typography;
-
-function Search() {
-  const [keyword, setKeyword] = useState("");
+export default function Search() {
+  const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState({ total: 0 });
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("user"));
-  const navigate = useNavigate();
-  const isVip = localStorage.getItem("isVip") === "true";
-  const [translatedText, setTranslatedText] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [columns, setColumns] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  const handleLoginClick = () => {
-    navigate("/login");
-  };
-
-  const onClose = () => {
-    setIsModalOpen(false);
-    setSelectedProduct(null); // Đặt lại sản phẩm được chọn
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("isVip");
-    setIsLoggedIn(false);
-    message.success("Logged out successfully");
-    window.location.reload();
-  };
-
+  // Handle the search operation
   const handleSearch = async () => {
+    if (!keyword.trim()) return;
+    
     setLoading(true);
+    setError(null);
+    
     try {
-      let response;
-      if (isVip) {
-        // VIP users use Natural Language Query search
-        response = await axios.post(
-          `http://localhost:8080/searchByNLQ`,
-          {
-            vietnameseText: keyword,
-            targetLanguage: "en"
-          }
-        );
-        
-        // Get translation for display
-        const translationResponse = await axios.post(
-          "http://localhost:8080/translate/google/googleTranslate",
-          {
-            vietnameseText: keyword,
-            targetLanguage: "en",
-          }
-        );
-        setTranslatedText(translationResponse.data.translated);
-      } else {
-        // Regular users use normal search
-        response = await axios.get(
-          `http://localhost:8080/search`,
-          { params: { keyword } }
-        );
-      }
-      
-      setResults(response.data);
-      calculateStats(response.data);
-
-      notification.success({
-        message: "Search Completed",
-        description: `Found ${response.data.length} laptops`,
-      });
-    } catch (error) {
-      notification.error({
-        message: "Search Failed",
-        description: error.message,
-      });
+      const response = await fetch(`http://localhost:8080/search?keyword=${encodeURIComponent(keyword)}`);
+      if (!response.ok) throw new Error('Search failed');
+      const data = await response.json();
+      setResults(data);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateStats = (data) => {
-    const total = data.length;
-    setStats({ total });
-  };
-
+  // Fetch all laptops (or products)
   const fetchAllLaptops = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      const response = await axios.get("/laptops"); // Không cần chỉ định domain
-      setResults(response.data);
-      calculateStats(response.data);
-    } catch (error) {
-      notification.error({
-        message: "Failed to fetch laptops",
-        description: error.message,
-      });
+      const response = await fetch('/laptops');
+      if (!response.ok) throw new Error('Failed to fetch laptops');
+      const data = await response.json();
+      setResults(data);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -135,332 +53,186 @@ function Search() {
     fetchAllLaptops();
   }, []);
 
-  const handleRowClick = async (record) => {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `http://localhost:8080/laptops/${record.id}`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch laptop details");
-      }
-
-      const data = await response.json();
-      setSelectedProduct(data);
-      setIsModalOpen(true);
-    } catch (error) {
-      console.error("Error fetching laptop details:", error);
-      message.error("Failed to load laptop details");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (results && results.length > 0) {
+      const dynamicColumns = Object.keys(results[0]).map(key => ({
+        header: key.charAt(0).toUpperCase() + key.slice(1),
+        accessorKey: key
+      }));
+      setColumns(dynamicColumns);
+      setTotalItems(results.length);
     }
+  }, [results]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const currentData = results.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleRowClick = (product) => {
+    setSelectedProduct(product);
+    setShowModal(true);
   };
-
-  const handleTableChange = (pagination) => {
-    setCurrentPage(pagination.current);
-  };
-
-  const columns = [
-    {
-      title: "Laptop ID",
-      dataIndex: "id", // Sửa lại key chính xác
-      key: "id",
-    },
-    {
-      title: "Laptop Name",
-      dataIndex: "name", // Sửa lại key chính xác
-      key: "name",
-    },
-    {
-      title: "Type",
-      dataIndex: "type", // Sửa lại key chính xác
-      key: "type",
-    },
-    {
-      title: "Price",
-      dataIndex: "price",
-      key: "price",
-      render: (price) => (
-        <Tag color="green" icon={<DollarCircleOutlined />}>
-          ${Number(price).toFixed(2)}
-        </Tag>
-      ),
-    },
-    {
-      title: "CPU",
-      dataIndex: "cpu", // Sửa lại key chính xác
-      key: "cpu",
-    },
-    {
-      title: "GPU",
-      dataIndex: "gpu", // Sửa lại key chính xác
-      key: "gpu",
-    },
-    {
-      title: "RAM",
-      dataIndex: "ram", // Sửa lại key chính xác
-      key: "ram",
-    },
-    {
-      title: "SSD",
-      dataIndex: "ssd", // Sửa lại key chính xác
-      key: "ssd",
-    },
-    {
-      title: "Description",
-      dataIndex: "description", // Sửa lại key chính xác
-      key: "description",
-    },
-  ];
-  
-
-  const handleDescriptionClick = (record) => {
-    setSelectedProduct(record); // Gán sản phẩm được chọn
-    setIsModalOpen(true); // Hiển thị modal
-  };
-
-  const dataSource = results.map((laptop) => ({
-    key: laptop.laptopId, // Thay đổi theo đúng tên trường trong dữ liệu của bạn
-    id: laptop.id,
-    name: laptop.name,
-    type: laptop.type,
-    price: laptop.price,
-    cpu: laptop.cpu,
-    gpu: laptop.gpu,
-    ram: laptop.ram,
-    ssd: laptop.ssd,
-    description: laptop.description,
-  }));
-  
 
   return (
-    <div className="search-container">
-      {/* Header */}
+    <div className="search-page">
+      {/* Header Section */}
       <div className="header">
-        {isLoggedIn && (
-          <div className={`user-status ${isVip ? "vip" : "normal"}`}>
-            {isVip ? (
-              <>
-                <StarFilled />
-                <span>VIP Member</span>
-              </>
-            ) : (
-              <>
-                <UserOutlined />
-                <span>Normal Member</span>
-              </>
-            )}
-          </div>
-        )}
-
-        {isLoggedIn ? (
-          <Button
-            type="primary"
-            danger
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        ) : (
-          <Button
-            type="primary"
-            icon={<LoginOutlined />}
-            onClick={handleLoginClick}
-          >
-            Login
-          </Button>
-        )}
+        <div className="header-content">
+          <h1>Laptop Catalog</h1>
+          <p>Browse and search through our collection of laptops</p>
+        </div>
       </div>
+
       {/* Main Content */}
-      <div className="content">
-        <Title level={1}>Laptop Catalog</Title>
-        <Text>Discover and search through our extensive collection</Text>
-
-        {/* Search Bar */}
-        <div className="searchbar-container">
-          <div className="search">
-            <Input
-              className="search-input"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Enter product name..."
-              onPressEnter={handleSearch}
-            />
-            <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              className="search-button"
-              onClick={handleSearch}
-            >
-              Search
-            </Button>
-          </div>
-
-          {/* Statistics */}
-          <div className="stats">
-            <Card>
-              <Statistic
-                title="Total Products"
-                value={stats.total}
-                prefix={<ShoppingOutlined />}
-              />
-            </Card>
+      <div className="main-content">
+        {/* Search and Stats Section */}
+        <div className="search-section">
+          <div className="search-container">
+            <div className="search-input-wrapper">
+              <div className="search-input-container">
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Search laptops by name, type, or specifications..."
+                />
+                <button onClick={handleSearch} className="search-button">
+                  🔍
+                </button>
+              </div>
+            </div>
+            
+            <div className="search-actions">
+              <button onClick={fetchAllLaptops} className="refresh-button">
+                Refresh List
+              </button>
+              <div className="total-products">
+                <span className="label">Total Products:</span>
+                <span className="value">{totalItems}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="translate-container">
-          {/* VIP Translation Section */}
-          <div className="translate">
-            {isVip && translatedText && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="vip-translation"
-              >
-                <Card
-                  className="vip-translation-card"
-                  title={
-                    <div className="vip-title">
-                      <StarFilled className="vip-icon" />
-                      <span>VIP Translation</span>
-                    </div>
-                  }
-                >
-                  <div className="vip-content">
-                    <div className="vip-section">
-                      <Text strong className="label">
-                        Original Text:
-                      </Text>
-                      <Text className="content">{keyword}</Text>
-                    </div>
-                    <div className="vip-section">
-                      <Text strong className="label">
-                        English Translation:
-                      </Text>
-                      <Text className="content">{translatedText}</Text>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            )}
+        {/* Error Popup */}
+        {error && (
+          <div className="error-popup">
+            <div className="error-popup-content">
+              <div className="error-popup-header">
+                <h2>Error</h2>
+                <button onClick={() => setError(null)} className="close-button">✕</button>
+              </div>
+              <div className="error-details">
+                <p>{error}</p>
+              </div>
+            </div>
           </div>
+        )}
 
-          <div className="refresh">
-            <Button
-              type="primary"
-              icon={<ReloadOutlined />}
-              onClick={fetchAllLaptops}
-            >
-              Refresh Catalog
-            </Button>
-          </div>
-        </div>
-
-        <div className="table-container">
-          {/* Table */}
+        {/* Results Table */}
+        <div className="results-table">
           {loading ? (
-            <Spin />
+            <div className="loading-state">
+              <div className="spinner" />
+            </div>
           ) : results.length === 0 ? (
-            <Empty description="No products found" />
+            <div className="empty-state">
+              <p className="title">No laptops found</p>
+              <p className="subtitle">Try adjusting your search criteria</p>
+            </div>
           ) : (
-            <Table
-              columns={columns}
-              dataSource={dataSource}
-              pagination={{
-                pageSize: 8,
-                current: currentPage,
-                onChange: setCurrentPage,
-              }}
-              onRow={(record) => ({
-                onClick: () => handleRowClick(record),
-              })}
-            />
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    {columns.map((column) => (
+                      <th key={column.accessorKey}>{column.header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentData.map((row, rowIndex) => (
+                    <tr key={row.id || rowIndex} onClick={() => handleRowClick(row)}>
+                      {columns.map((column) => (
+                        <td key={column.accessorKey}>
+                          {column.accessorKey === 'price' 
+                            ? <span className="price-value">${Number(row[column.accessorKey]).toFixed(2)}</span>
+                            : row[column.accessorKey]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Nội dung modal */}
-            <Modal
-              title={null}
-              open={isModalOpen}
-              onCancel={onClose}
-              footer={null}
-              width={1000}
-              className="custom-modal"
-            >
-              {selectedProduct && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="modal-card"
-                >
-                  <div className="modal-header">
-                    <Title className="modal-title" level={3} >
-                      {selectedProduct.title}
-                    </Title>
-                  </div>
-                  <div className="modal-body">
-                    <div className="modal-details">
-                      <div>
-                        <Text strong>Price:</Text>{" "}
-                        <Tag color="green" icon={<DollarCircleOutlined />}>
-                          ${Number(selectedProduct.price).toFixed(2)}
-                        </Tag>
-                      </div>
-                      <div>
-                        <Text strong>Availability:</Text>{" "}
-                        <Badge
-                          status={
-                            selectedProduct.availability ? "success" : "error"
-                          }
-                          text={
-                            selectedProduct.availability
-                              ? "In Stock"
-                              : "Out of Stock"
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Text strong>Rating:</Text>{" "}
-                        <Rate
-                          disabled
-                          defaultValue={parseFloat(selectedProduct.rating)}
-                        />
-                      </div>
-                    </div>
-                    <div className="modal-description">
-                      <Text className="about-it" strong>About It:</Text>
-                      <p>
-                        {selectedProduct.aboutIt ||
-                          "No additional information available."}
-                      </p>
-                    </div>
-
-                    <div className="modal-section">
-                      <Text className="description" strong>Description: </Text>
-                      <p>{selectedProduct.description}</p>
-                    </div>
-                  </div>
-                  <div className="modal-footer">
-                    <Button type="primary" onClick={onClose}>
-                      Close
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </Modal>
-          </motion.div>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="pagination-controls">
+            <button 
+              onClick={() => setCurrentPage(currentPage - 1)} 
+              disabled={currentPage === 1}
+              className="pagination-button"
+            >
+              Prev
+            </button>
+            <span className="page-info">{currentPage} of {totalPages}</span>
+            <button 
+              onClick={() => setCurrentPage(currentPage + 1)} 
+              disabled={currentPage === totalPages}
+              className="pagination-button"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Detail Modal */}
+      {showModal && selectedProduct && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-body">
+              <div className="modal-header">
+                <h2>{selectedProduct.name}</h2>
+                <button onClick={() => setShowModal(false)} className="close-button">
+                  ✕
+                </button>
+              </div>
+               <div className="specs-grid">
+                <div className="spec-item">
+                  <span className="spec-label">Price</span>
+                  <p className="price-value">
+                    ${Number(selectedProduct.price).toFixed(2)}
+                  </p>
+                </div>
+                <div className="spec-item">
+                  <span className="spec-label">Type</span>
+                  <p className="spec-value">{selectedProduct.type}</p>
+                </div>
+
+                <div className="spec-item">
+                  <span className="spec-label">CPU</span>
+                  <p className="spec-value">{selectedProduct.cpu}</p>
+                </div>
+
+                <div className="spec-item">
+                  <span className="spec-label">GPU</span>
+                  <p className="spec-value">{selectedProduct.gpu}</p>
+                </div>
+
+                <div className="spec-item">
+                  <span className="spec-label">RAM</span>
+                  <p className="spec-value">{selectedProduct.ram}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export default Search;
