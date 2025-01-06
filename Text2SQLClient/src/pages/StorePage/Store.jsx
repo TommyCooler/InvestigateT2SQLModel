@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Button,
-  message,
+import React, { useState, useEffect } from "react";
+import { 
+  Button, 
+  message, 
+  Card, 
+  Input, 
+  Typography,
+  Select
 } from "antd";
 import {
   StarFilled,
@@ -10,38 +14,63 @@ import {
   UserOutlined,
   LaptopOutlined,
   ShopOutlined,
+  SearchOutlined,
+  FilterOutlined
 } from "@ant-design/icons";
-import './Store.scss';
+import "./Store.scss";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Store() {
-  const [keyword, setKeyword] = useState('');
+  // States for data management
+  const [keyword, setKeyword] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedStore, setSelectedStore] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [columns, setColumns] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("user"));
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isVip = localStorage.getItem("isVip") === "true";
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Add state for active tab
-  const [activeTab, setActiveTab] = useState(location.pathname === "/store" ? "store" : "laptop");
+  // Định nghĩa cứng columns cho Store
+  const columns = [
+    { header: "ID", accessorKey: "id" },
+    { header: "Store Name", accessorKey: "name" },
+    { header: "Address", accessorKey: "address" },
+    { header: "City", accessorKey: "city" },
+    { header: "District", accessorKey: "district" }
+  ];
+
+  // Filter states
+  const [cityFilter, setCityFilter] = useState(null);
+  const [districtFilter, setDistrictFilter] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [cities, setCities] = useState([]);
+  const [districts, setDistricts] = useState([]);
+
+  // Router hooks
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // User status
+  const isVip = localStorage.getItem("isVip") === "true";
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState(
+    location.pathname === "/store" ? "store" : "laptop"
+  );
 
   // Handle navigation between tabs
   const handleNavigation = (path) => {
     setActiveTab(path);
     navigate(`/${path}`);
-    setKeyword('');
+    setKeyword("");
     setResults([]);
     setCurrentPage(1);
   };
 
+  // Authentication handlers
   const handleLoginClick = () => {
     navigate("/login");
   };
@@ -54,92 +83,147 @@ export default function Store() {
     window.location.reload();
   };
 
-  // Handle the search operation
+  // Basic search operation
   const handleSearch = async () => {
-    if (!keyword.trim()) return;
+    if (!keyword.trim()) {
+      message.warning("Please enter a search keyword");
+      return;
+    }
     
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8080/search?keyword=${encodeURIComponent(keyword)}`);
-      if (!response.ok) throw new Error('Search failed');
+      const response = await fetch(`http://localhost:8080/store/search?keyword=${encodeURIComponent(keyword)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Search failed');
+      }
+
       const data = await response.json();
+      console.log('Search results:', data);
       setResults(data);
+      setTotalItems(data.length);
+      if (data.length === 0) {
+        message.info("No stores found for your search");
+      }
     } catch (err) {
-      setError(err.message);
+      console.error('Search error:', err);
+      setError('Failed to perform search. Please try again.');
+      message.error('Search failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch all laptops (or products)
-  const fetchAllLaptops = async () => {
+  // Fetch all stores
+  const fetchAllStores = async (filters = {}) => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch('/laptops');
-      if (!response.ok) throw new Error('Failed to fetch laptops');
+      let url = 'http://localhost:8080/store/all?';
+      if (filters.city) url += `city=${filters.city}&`;
+      if (filters.district) url += `district=${filters.district}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch stores');
+      }
+
       const data = await response.json();
+      console.log('Fetched stores:', data);
       setResults(data);
+      setTotalItems(data.length);
+
+      // Extract unique cities and districts for filters
+      const uniqueCities = [...new Set(data.map(store => store.city))];
+      setCities(uniqueCities);
+
+      const uniqueDistricts = [...new Set(data.map(store => store.district))];
+      setDistricts(uniqueDistricts);
+
     } catch (err) {
-      setError(err.message);
+      console.error('Fetch error:', err);
+      setError('Failed to fetch stores. Please try again.');
+      message.error('Failed to load stores. Please refresh the page.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle filter changes
+  const handleFilterChange = () => {
+    fetchAllStores({
+      city: cityFilter,
+      district: districtFilter
+    });
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    setCityFilter(null);
+    setDistrictFilter(null);
+    fetchAllStores();
+  };
+
+  // Initial data fetch
   useEffect(() => {
-    fetchAllLaptops();
+    fetchAllStores();
   }, []);
-
-  useEffect(() => {
-    if (results && results.length > 0) {
-      const dynamicColumns = Object.keys(results[0]).map(key => ({
-        header: key.charAt(0).toUpperCase() + key.slice(1),
-        accessorKey: key
-      }));
-      setColumns(dynamicColumns);
-      setTotalItems(results.length);
-    }
-  }, [results]);
 
   // Pagination logic
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const currentData = results.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const currentData = results.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-  const handleRowClick = (product) => {
-    setSelectedProduct(product);
+  // Row click handler
+  const handleRowClick = (store) => {
+    setSelectedStore(store);
     setShowModal(true);
   };
 
   return (
     <div className="search-page">
       {/* Navigation Header */}
-      <div className="navigation-header">
-        <div className="nav-buttons">
-          <Button
-            type={activeTab === "laptop" ? "primary" : "default"}
-            icon={<LaptopOutlined />}
-            onClick={() => handleNavigation("laptop")}
-            className={`nav-button ${activeTab === "laptop" ? "active" : ""}`}
-          >
-            Laptop
-          </Button>
-          <Button
-            type={activeTab === "store" ? "primary" : "default"}
-            icon={<ShopOutlined />}
-            onClick={() => handleNavigation("store")}
-            className={`nav-button ${activeTab === "store" ? "active" : ""}`}
-          >
-            Store
-          </Button>
-        </div>
-      </div>
-
-      {/* User Header Section */}
       <div className="header">
+        <div className="navigation-header">
+          <div className="nav-buttons">
+            <Button
+              type={activeTab === "laptop" ? "primary" : "default"}
+              icon={<LaptopOutlined />}
+              onClick={() => handleNavigation("laptop")}
+              className={`nav-button ${activeTab === "laptop" ? "active" : ""}`}
+            >
+              Laptop
+            </Button>
+            <Button
+              type={activeTab === "store" ? "primary" : "default"}
+              icon={<ShopOutlined />}
+              onClick={() => handleNavigation("store")}
+              className={`nav-button ${activeTab === "store" ? "active" : ""}`}
+            >
+              Store
+            </Button>
+          </div>
+        </div>
+
+        {/* User Status Section */}
         {isLoggedIn && (
           <div className={`user-status ${isVip ? "vip" : "normal"}`}>
             {isVip ? (
@@ -156,6 +240,7 @@ export default function Store() {
           </div>
         )}
 
+        {/* Login/Logout Button */}
         {isLoggedIn ? (
           <Button
             type="primary"
@@ -174,68 +259,115 @@ export default function Store() {
             Login
           </Button>
         )}
-        <div className="header-content">
-          <h1>StoreStore Catalog</h1>
-          <p>Browse and search through our collection of store</p>
-        </div>
+      </div>
+
+      {/* Header Content */}
+      <div className="header-content">
+        <h1>Store Locations</h1>
+        <p>Find our stores across the country</p>
       </div>
 
       {/* Main Content */}
       <div className="main-content">
-        {/* Search and Stats Section */}
+        {/* Search and Filter Section */}
         <div className="search-section">
           <div className="search-container">
             <div className="search-input-wrapper">
               <div className="search-input-container">
-                <input
-                  type="text"
+                <Input
+                  placeholder="Search stores..."
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Search laptops by name, type, or specifications..."
+                  onPressEnter={handleSearch}
+                  prefix={<SearchOutlined />}
+                  suffix={
+                    <Button
+                      type="link"
+                      icon={<FilterOutlined />}
+                      onClick={() => setShowFilters(!showFilters)}
+                    />
+                  }
                 />
-                <button onClick={handleSearch} className="search-button">
-                  🔍
-                </button>
-              </div>
-            </div>
-            
-            <div className="search-actions">
-              <button onClick={fetchAllLaptops} className="refresh-button">
-                Refresh List
-              </button>
-              <div className="total-products">
-                <span className="label">Total Products:</span>
-                <span className="value">{totalItems}</span>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                  loading={loading}
+                >
+                  Search
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Error Popup */}
-        {error && (
-          <div className="error-popup">
-            <div className="error-popup-content">
-              <div className="error-popup-header">
-                <h2>Error</h2>
-                <button onClick={() => setError(null)} className="close-button">✕</button>
+        {/* Filters Section */}
+        {showFilters && (
+          <div className="filter-section">
+            <Card title="Filters" className="filter-card">
+              <div className="city-filter">
+                <Typography.Title level={5}>City</Typography.Title>
+                <Select
+                  placeholder="Select city"
+                  value={cityFilter}
+                  onChange={(value) => setCityFilter(value)}
+                  allowClear
+                  style={{ width: '100%' }}
+                >
+                  {cities.map(city => (
+                    <Select.Option key={city} value={city}>
+                      {city}
+                    </Select.Option>
+                  ))}
+                </Select>
               </div>
-              <div className="error-details">
-                <p>{error}</p>
+              
+              <div className="district-filter">
+                <Typography.Title level={5}>District</Typography.Title>
+                <Select
+                  placeholder="Select district"
+                  value={districtFilter}
+                  onChange={(value) => setDistrictFilter(value)}
+                  allowClear
+                  style={{ width: '100%' }}
+                >
+                  {districts.map(district => (
+                    <Select.Option key={district} value={district}>
+                      {district}
+                    </Select.Option>
+                  ))}
+                </Select>
               </div>
-            </div>
+
+              <div className="filter-actions">
+                <Button type="primary" onClick={handleFilterChange}>
+                  Apply Filters
+                </Button>
+                <Button onClick={resetFilters}>
+                  Reset Filters
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
+
+        {/* Results Count */}
+        <div className="results-count">
+          <Typography.Text>
+            Found {totalItems} stores
+          </Typography.Text>
+        </div>
 
         {/* Results Table */}
         <div className="results-table">
           {loading ? (
             <div className="loading-state">
               <div className="spinner" />
+              <p>Loading data...</p>
             </div>
           ) : results.length === 0 ? (
             <div className="empty-state">
-              <p className="title">No laptops found</p>
+              <p className="title">No stores found</p>
               <p className="subtitle">Try adjusting your search criteria</p>
             </div>
           ) : (
@@ -250,12 +382,13 @@ export default function Store() {
                 </thead>
                 <tbody>
                   {currentData.map((row, rowIndex) => (
-                    <tr key={row.id || rowIndex} onClick={() => handleRowClick(row)}>
+                    <tr
+                      key={row.id || rowIndex}
+                      onClick={() => handleRowClick(row)}
+                    >
                       {columns.map((column) => (
                         <td key={column.accessorKey}>
-                          {column.accessorKey === 'price' 
-                            ? <span className="price-value">${Number(row[column.accessorKey]).toFixed(2)}</span>
-                            : row[column.accessorKey]}
+                          {row[column.accessorKey]}
                         </td>
                       ))}
                     </tr>
@@ -269,61 +402,54 @@ export default function Store() {
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="pagination-controls">
-            <button 
-              onClick={() => setCurrentPage(currentPage - 1)} 
+            <Button
+              onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="pagination-button"
             >
-              Prev
-            </button>
-            <span className="page-info">{currentPage} of {totalPages}</span>
-            <button 
-              onClick={() => setCurrentPage(currentPage + 1)} 
+              Previous
+            </Button>
+            <span className="page-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="pagination-button"
             >
               Next
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
-      {/* Detail Modal */}
-      {showModal && selectedProduct && (
+      {/* Store Detail Modal */}
+      {showModal && selectedStore && (
         <div className="modal-overlay">
           <div className="modal-content">
+            <div className="modal-header">
+              <h2>{selectedStore.name}</h2>
+              <Button 
+                type="text" 
+                icon={<span>✕</span>} 
+                onClick={() => setShowModal(false)}
+              />
+            </div>
             <div className="modal-body">
-              <div className="modal-header">
-                <h2>{selectedProduct.name}</h2>
-                <button onClick={() => setShowModal(false)} className="close-button">
-                  ✕
-                </button>
-              </div>
-              <div className="specs-grid">
-                <div className="spec-item">
-                  <span className="spec-label">Price</span>
-                  <p className="price-value">
-                    ${Number(selectedProduct.price).toFixed(2)}
-                  </p>
+              <div className="store-details">
+                <div className="detail-item">
+                  <span className="label">Store ID:</span>
+                  <span className="value">{selectedStore.id}</span>
                 </div>
-                <div className="spec-item">
-                  <span className="spec-label">Type</span>
-                  <p className="spec-value">{selectedProduct.type}</p>
+                <div className="detail-item">
+                  <span className="label">Address:</span>
+                  <span className="value">{selectedStore.address}</span>
                 </div>
-
-                <div className="spec-item">
-                  <span className="spec-label">CPU</span>
-                  <p className="spec-value">{selectedProduct.cpu}</p>
+                <div className="detail-item">
+                  <span className="label">City:</span>
+                  <span className="value">{selectedStore.city}</span>
                 </div>
-
-                <div className="spec-item">
-                  <span className="spec-label">GPU</span>
-                  <p className="spec-value">{selectedProduct.gpu}</p>
-                </div>
-
-                <div className="spec-item">
-                  <span className="spec-label">RAM</span>
-                  <p className="spec-value">{selectedProduct.ram}</p>
+                <div className="detail-item">
+                  <span className="label">District:</span>
+                  <span className="value">{selectedStore.district}</span>
                 </div>
               </div>
             </div>
