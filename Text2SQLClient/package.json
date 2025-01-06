@@ -10,13 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "antd": "^5.21.6",
-    "axios": "^1.7.7",
+    "@ant-design/icons": "^5.5.2",
+    "antd": "^5.22.7",
+    "axios": "^1.7.9",
     "cors": "^2.8.5",
-    "framer-motion": "^11.11.17",
+    "framer-motion": "^11.15.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.27.0"
+    "react-router-dom": "^6.28.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",

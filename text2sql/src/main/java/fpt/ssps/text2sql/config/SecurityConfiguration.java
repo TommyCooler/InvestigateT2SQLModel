@@ -11,6 +11,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -18,39 +19,42 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfiguration {
 
-    private final List<String> ORIGIN_SOURCES = List.of("*");
-    private final List<String> ALLOWED_METHODS = List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD");
-    private final List<String> ALLOWED_HEADERS = List.of("*");
-    private final Long MAX_AGE = 7200L;
-    private final String CORS_PATTERN = "/**";
-
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(
-                        cors -> cors.configurationSource(corsConfigurationSource())
-                )
-                .authorizeHttpRequests(
-                        request -> request
-                                .requestMatchers("/**")
-                                .permitAll()
-                );
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> 
+                auth.anyRequest().permitAll()
+            );
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(ORIGIN_SOURCES);
-        corsConfiguration.setAllowedMethods(ALLOWED_METHODS);
-        corsConfiguration.setAllowCredentials(true);
-        corsConfiguration.setAllowedHeaders(ALLOWED_HEADERS);
-        corsConfiguration.setMaxAge(MAX_AGE);
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Thêm cả hai origins (development ports)
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:5173",  // Vite default
+            "http://localhost:3000"   // React default
+        ));
+        
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Headers",
+            "Access-Control-Allow-Methods",
+            "Access-Control-Allow-Credentials"
+        ));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration(CORS_PATTERN, corsConfiguration);
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }

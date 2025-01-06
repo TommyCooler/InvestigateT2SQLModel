@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    
     @Query(value = "SELECT * FROM user WHERE BINARY username = :username AND BINARY password = :password", nativeQuery = true)
     User findByUsernameAndPassword(String username, String password);
 }

@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { Button, message } from "antd";
+import React, { useState, useEffect } from 'react';
+import {
+  Button,
+  message,
+} from "antd";
 import {
   StarFilled,
   LoginOutlined,
@@ -7,15 +10,12 @@ import {
   UserOutlined,
   LaptopOutlined,
   ShopOutlined,
-  SearchOutlined,
-  TranslationOutlined
 } from "@ant-design/icons";
-import "./Search.scss";
+import './Store.scss';
 import { useNavigate, useLocation } from "react-router-dom";
 
-export default function Search() {
-  // States for data management
-  const [keyword, setKeyword] = useState("");
+export default function Store() {
+  const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -23,32 +23,25 @@ export default function Search() {
   const [showModal, setShowModal] = useState(false);
   const [columns, setColumns] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("user"));
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isVip = localStorage.getItem("isVip") === "true";
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Router hooks
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // User status
-  const isVip = localStorage.getItem("isVip") === "true";
-
-  // Tab state
-  const [activeTab, setActiveTab] = useState(
-    location.pathname === "/store" ? "store" : "laptop"
-  );
+  // Add state for active tab
+  const [activeTab, setActiveTab] = useState(location.pathname === "/store" ? "store" : "laptop");
 
   // Handle navigation between tabs
   const handleNavigation = (path) => {
     setActiveTab(path);
     navigate(`/${path}`);
-    setKeyword("");
+    setKeyword('');
     setResults([]);
     setCurrentPage(1);
   };
 
-  // Authentication handlers
   const handleLoginClick = () => {
     navigate("/login");
   };
@@ -61,162 +54,61 @@ export default function Search() {
     window.location.reload();
   };
 
-  // Basic search operation
+  // Handle the search operation
   const handleSearch = async () => {
-    if (!keyword.trim()) {
-      message.warning("Please enter a search keyword");
-      return;
-    }
+    if (!keyword.trim()) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8080/search?keyword=${encodeURIComponent(keyword)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Search failed');
-      }
-
+      const response = await fetch(`http://localhost:8080/search?keyword=${encodeURIComponent(keyword)}`);
+      if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
-      console.log('Search results:', data);
       setResults(data);
-      setTotalItems(data.length);
-      if (data.length === 0) {
-        message.info("No results found for your search");
-      }
     } catch (err) {
-      console.error('Search error:', err);
-      setError('Failed to perform search. Please try again.');
-      message.error('Search failed. Please try again.');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Natural Language Query search with translation
-  const handleNLQSearch = async () => {
-    if (!keyword.trim()) {
-      message.warning("Please enter a search term");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // First translate the query
-      const translateResponse = await fetch('http://localhost:8080/googleTranslate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          vietnameseText: keyword,
-          targetLanguage: 'en'
-        })
-      });
-
-      if (!translateResponse.ok) {
-        throw new Error('Translation failed');
-      }
-
-      const translateData = await translateResponse.json();
-      console.log('Translated query:', translateData);
-
-      // Then search using the translated query
-      const searchResponse = await fetch('http://localhost:8080/searchByNLQ', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          vietnameseText: keyword,
-          targetLanguage: 'en'
-        })
-      });
-
-      if (!searchResponse.ok) {
-        throw new Error('Search failed');
-      }
-
-      const searchData = await searchResponse.json();
-      setResults(searchData);
-      setTotalItems(searchData.length);
-
-      if (searchData.length === 0) {
-        message.info("No results found");
-      }
-    } catch (err) {
-      console.error('NLQ Search error:', err);
-      setError('Search failed. Please try again.');
-      message.error('Search failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch all laptops
+  // Fetch all laptops (or products)
   const fetchAllLaptops = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch('http://localhost:8080/laptops', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch laptops');
-      }
-
+      const response = await fetch('/laptops');
+      if (!response.ok) throw new Error('Failed to fetch laptops');
       const data = await response.json();
-      console.log('Fetched laptops:', data);
       setResults(data);
-      setTotalItems(data.length);
     } catch (err) {
-      console.error('Fetch error:', err);
-      setError('Failed to fetch laptops. Please try again.');
-      message.error('Failed to load laptops. Please refresh the page.');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial data fetch
   useEffect(() => {
     fetchAllLaptops();
   }, []);
 
-  // Set up columns when data is loaded
   useEffect(() => {
     if (results && results.length > 0) {
-      const dynamicColumns = Object.keys(results[0]).map((key) => ({
+      const dynamicColumns = Object.keys(results[0]).map(key => ({
         header: key.charAt(0).toUpperCase() + key.slice(1),
-        accessorKey: key,
+        accessorKey: key
       }));
       setColumns(dynamicColumns);
+      setTotalItems(results.length);
     }
   }, [results]);
 
   // Pagination logic
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const currentData = results.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const currentData = results.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Row click handler
   const handleRowClick = (product) => {
     setSelectedProduct(product);
     setShowModal(true);
@@ -225,29 +117,29 @@ export default function Search() {
   return (
     <div className="search-page">
       {/* Navigation Header */}
-      <div className="header">
-        <div className="navigation-header">
-          <div className="nav-buttons">
-            <Button
-              type={activeTab === "laptop" ? "primary" : "default"}
-              icon={<LaptopOutlined />}
-              onClick={() => handleNavigation("laptop")}
-              className={`nav-button ${activeTab === "laptop" ? "active" : ""}`}
-            >
-              Laptop
-            </Button>
-            <Button
-              type={activeTab === "store" ? "primary" : "default"}
-              icon={<ShopOutlined />}
-              onClick={() => handleNavigation("store")}
-              className={`nav-button ${activeTab === "store" ? "active" : ""}`}
-            >
-              Store
-            </Button>
-          </div>
+      <div className="navigation-header">
+        <div className="nav-buttons">
+          <Button
+            type={activeTab === "laptop" ? "primary" : "default"}
+            icon={<LaptopOutlined />}
+            onClick={() => handleNavigation("laptop")}
+            className={`nav-button ${activeTab === "laptop" ? "active" : ""}`}
+          >
+            Laptop
+          </Button>
+          <Button
+            type={activeTab === "store" ? "primary" : "default"}
+            icon={<ShopOutlined />}
+            onClick={() => handleNavigation("store")}
+            className={`nav-button ${activeTab === "store" ? "active" : ""}`}
+          >
+            Store
+          </Button>
         </div>
+      </div>
 
-        {/* User Status Section */}
+      {/* User Header Section */}
+      <div className="header">
         {isLoggedIn && (
           <div className={`user-status ${isVip ? "vip" : "normal"}`}>
             {isVip ? (
@@ -264,7 +156,6 @@ export default function Search() {
           </div>
         )}
 
-        {/* Login/Logout Button */}
         {isLoggedIn ? (
           <Button
             type="primary"
@@ -283,17 +174,15 @@ export default function Search() {
             Login
           </Button>
         )}
-      </div>
-
-      {/* Header Content */}
-      <div className="header-content">
-        <h1>Laptop Catalog</h1>
-        <p>Browse and search through our collection of laptops</p>
+        <div className="header-content">
+          <h1>StoreStore Catalog</h1>
+          <p>Browse and search through our collection of store</p>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="main-content">
-        {/* Search Section */}
+        {/* Search and Stats Section */}
         <div className="search-section">
           <div className="search-container">
             <div className="search-input-wrapper">
@@ -302,40 +191,19 @@ export default function Search() {
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleNLQSearch()}
-                  placeholder="Tìm kiếm laptop (có thể dùng tiếng Việt)..."
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Search laptops by name, type, or specifications..."
                 />
-                <div className="search-buttons">
-                  <Button
-                    icon={<SearchOutlined />}
-                    onClick={handleSearch}
-                    loading={loading}
-                    className="search-button"
-                    title="Basic Search"
-                  >
-                    Search
-                  </Button>
-                  <Button
-                    icon={<TranslationOutlined />}
-                    onClick={handleNLQSearch}
-                    loading={loading}
-                    className="nlq-search-button"
-                    title="Search in Vietnamese"
-                  >
-                    VN Search
-                  </Button>
-                </div>
+                <button onClick={handleSearch} className="search-button">
+                  🔍
+                </button>
               </div>
             </div>
-
+            
             <div className="search-actions">
-              <Button
-                onClick={fetchAllLaptops}
-                loading={loading}
-                className="refresh-button"
-              >
+              <button onClick={fetchAllLaptops} className="refresh-button">
                 Refresh List
-              </Button>
+              </button>
               <div className="total-products">
                 <span className="label">Total Products:</span>
                 <span className="value">{totalItems}</span>
@@ -350,9 +218,7 @@ export default function Search() {
             <div className="error-popup-content">
               <div className="error-popup-header">
                 <h2>Error</h2>
-                <button onClick={() => setError(null)} className="close-button">
-                  ✕
-                </button>
+                <button onClick={() => setError(null)} className="close-button">✕</button>
               </div>
               <div className="error-details">
                 <p>{error}</p>
@@ -366,7 +232,6 @@ export default function Search() {
           {loading ? (
             <div className="loading-state">
               <div className="spinner" />
-              <p>Loading data...</p>
             </div>
           ) : results.length === 0 ? (
             <div className="empty-state">
@@ -385,19 +250,12 @@ export default function Search() {
                 </thead>
                 <tbody>
                   {currentData.map((row, rowIndex) => (
-                    <tr
-                      key={row.id || rowIndex}
-                      onClick={() => handleRowClick(row)}
-                    >
+                    <tr key={row.id || rowIndex} onClick={() => handleRowClick(row)}>
                       {columns.map((column) => (
                         <td key={column.accessorKey}>
-                          {column.accessorKey === "price" ? (
-                            <span className="price-value">
-                              ${Number(row[column.accessorKey]).toFixed(2)}
-                            </span>
-                          ) : (
-                            row[column.accessorKey]
-                          )}
+                          {column.accessorKey === 'price' 
+                            ? <span className="price-value">${Number(row[column.accessorKey]).toFixed(2)}</span>
+                            : row[column.accessorKey]}
                         </td>
                       ))}
                     </tr>
@@ -411,23 +269,21 @@ export default function Search() {
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="pagination-controls">
-            <Button
-              onClick={() => setCurrentPage(currentPage - 1)}
+            <button 
+              onClick={() => setCurrentPage(currentPage - 1)} 
               disabled={currentPage === 1}
               className="pagination-button"
             >
               Prev
-            </Button>
-            <span className="page-info">
-              {currentPage} of {totalPages}
-            </span>
-            <Button
-              onClick={() => setCurrentPage(currentPage + 1)}
+            </button>
+            <span className="page-info">{currentPage} of {totalPages}</span>
+            <button 
+              onClick={() => setCurrentPage(currentPage + 1)} 
               disabled={currentPage === totalPages}
               className="pagination-button"
             >
               Next
-            </Button>
+            </button>
           </div>
         )}
       </div>
@@ -454,14 +310,17 @@ export default function Search() {
                   <span className="spec-label">Type</span>
                   <p className="spec-value">{selectedProduct.type}</p>
                 </div>
+
                 <div className="spec-item">
                   <span className="spec-label">CPU</span>
                   <p className="spec-value">{selectedProduct.cpu}</p>
                 </div>
+
                 <div className="spec-item">
                   <span className="spec-label">GPU</span>
                   <p className="spec-value">{selectedProduct.gpu}</p>
                 </div>
+
                 <div className="spec-item">
                   <span className="spec-label">RAM</span>
                   <p className="spec-value">{selectedProduct.ram}</p>

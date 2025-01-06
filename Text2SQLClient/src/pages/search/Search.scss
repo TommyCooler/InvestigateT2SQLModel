@@ -1,10 +1,11 @@
 .search-page {
-  font-family: 'Roboto', sans-serif;
+  font-family: "Roboto", sans-serif;
   background-color: #f9fafb;
   padding: 2rem;
   color: #333;
 
   .header {
+    display: flex;
     text-align: center;
     margin-bottom: 2rem;
 
@@ -19,6 +20,10 @@
     }
   }
 
+  .header-content {
+    margin-left: 40%;
+  }
+
   .main-content {
     display: flex;
     flex-direction: column;
@@ -26,16 +31,18 @@
 
     .search-section {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       background-color: white;
       padding: 1.5rem;
       border-radius: 0.375rem;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      
+
+      .search-container {
+        display: flex;
+      }
+
       .search-input-container {
         display: flex;
-        align-items: center;
         gap: 1rem;
 
         input {
@@ -65,12 +72,16 @@
           &:hover {
             background-color: #2563eb;
           }
+
+          &:focus-visible {
+            outline: 2px dashed #3b82f6;
+            outline-offset: 2px;
+          }
         }
       }
 
       .search-actions {
         display: flex;
-        align-items: center;
         gap: 1rem;
 
         .refresh-button {
@@ -107,7 +118,8 @@
         width: 100%;
         border-collapse: collapse;
 
-        th, td {
+        th,
+        td {
           padding: 1rem;
           text-align: left;
           border-bottom: 1px solid #e5e7eb;
@@ -125,6 +137,16 @@
             position: absolute;
             right: 1rem;
             color: #9ca3af;
+          }
+
+          &.asc .sort-icon {
+            content: '▲';
+            color: #3b82f6;
+          }
+
+          &.desc .sort-icon {
+            content: '▼';
+            color: #3b82f6;
           }
         }
 
@@ -168,188 +190,56 @@
 
         &.active {
           background-color: #3b82f6;
-          border-color: #3b82f6;
           color: white;
-
-          &:hover {
-            background-color: #2563eb;
-          }
+          border-color: #3b82f6;
+          cursor: default;
         }
       }
     }
   }
-  .pagination {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
-  gap: 0.5rem;
-}
 
-.pagination-button {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  background-color: white;
-  color: #374151;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s;
+  @media (max-width: 768px) {
+    .header-content {
+      margin-left: 0;
+      text-align: center;
+    }
 
-  &:hover {
-    background-color: #f3f4f6;
-    border-color: #9ca3af;
+    .results-table table {
+      font-size: 0.875rem;
+    }
+
+    .pagination {
+      flex-wrap: wrap;
+    }
   }
 
-  &.active {
-    background-color: #3b82f6;
-    border-color: #3b82f6;
-    color: white;
+  &.dark-mode {
+    background-color: #1f2937;
+    color: #d1d5db;
 
-    &:hover {
+    .search-section,
+    .results-table {
+      background-color: #374151;
+      color: #d1d5db;
+    }
+
+    button {
       background-color: #2563eb;
     }
-  }
-}
 
-.results-table {
-  .table-container {
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      
-      th {
-        padding: 1rem;
-        background-color: rgb(1, 47, 100);
-        color: white;
-        font-weight: 600;
-        text-align: left;
-        border-bottom: 2px solid #e5e7eb;
-        text-transform: capitalize; /* Capitalize for better visual clarity */
+    button:hover {
+      background-color: #1e40af;
+    }
 
-        &:hover {
-          background-color: #eef2f7;
-        }
+    input {
+      background-color: #1f2937;
+      color: #d1d5db;
+      border-color: #4b5563;
 
-        /* Màu cho từng tiêu đề cụ thể */
-        &.id {
-          color: #4f46e5; /* Màu tím cho ID */
-        }
-
-        &.title {
-          color: #2563eb; /* Màu xanh lam cho Title */
-        }
-
-        &.description {
-          color: #d97706; /* Màu cam cho Description */
-        }
-
-        &.price {
-          color: #16a34a; /* Màu xanh lá cho Price */
-        }
-      }
-
-      td {
-        padding: 1rem;
-        border-bottom: 1px solid #e5e7eb;
-        color: #4b5563;
-        transition: background-color 0.3s ease;
-
-        &.price-value {
-          font-weight: 600;
-          color: #16a34a; /* Màu cho giá trị tiền */
-        }
-
-        &:hover {
-          background-color: #f3f4f6; /* Màu nền khi hover */
-        }
-      }
-
-      tr {
-        &:nth-child(even) {
-          background-color: #f9fafb; /* Màu nền cho dòng chẵn */
-        }
-
-        &:hover {
-          background-color: #e2e8f0; /* Màu nền khi hover trên dòng */
-        }
-
-        &:nth-child(odd):hover {
-          background-color: #e2e8f0; /* Màu nền khi hover trên dòng lẻ */
-        }
+      &:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
       }
     }
   }
-}
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  max-width: 500px;
-  width: 100%;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
-.error-details {
-  margin-top: 20px;
-  font-size: 1rem;
-  color: #e11d48;
-}
-
-.pagination-controls {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.pagination-button {
-  padding: 8px 16px;
-  margin: 0 5px;
-  cursor: pointer;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-}
-
-.pagination-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.page-info {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 10px;
-}
-
-
 }
