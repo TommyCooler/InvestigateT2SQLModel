@@ -3,15 +3,18 @@ package fpt.ssps.text2sql.service;
 import fpt.ssps.text2sql.model.Laptop;
 import fpt.ssps.text2sql.repo.LaptopRepository;
 import fpt.ssps.text2sql.service.iservice.ILaptopService;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.lang.reflect.Field;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.List;
 
 @Service
-public class LaptopService implements ILaptopService{
+public class LaptopService implements ILaptopService {
 
     @Autowired
     private LaptopRepository laptopRepository;
@@ -30,90 +33,132 @@ public class LaptopService implements ILaptopService{
     }
 
     @Override
-    public Laptop getById(Long id){
+    public Laptop getById(Long id) {
         return laptopRepository.findById(id).get();
     }
 
-    // Tìm sản phẩm theo câu SQL
     @Override
     public List<Laptop> searchLaptopsBySQL(String sqlQuery) {
-        System.out.println(sqlQuery);
-        String sqlClean = extractSqlQuery1(sqlQuery);
-        System.out.println(sqlClean);
-        if (!sqlClean.toUpperCase().startsWith("SELECT")) {
-            throw new IllegalArgumentException("Only SELECT queries are allowed.");
+        System.out.println("Original query: " + sqlQuery);
+        
+        String sqlClean = extractSqlQuery(sqlQuery);
+        System.out.println("Cleaned query: " + sqlClean);
+
+        if (!isValidQuery(sqlClean)) {
+            throw new IllegalArgumentException("Invalid or unsafe query");
         }
-        System.out.println("SELECT * FROM " + sqlClean.split(" FROM ", 2)[1]);
-        return jdbcTemplate.query(
-                "SELECT * FROM " + sqlClean.split(" FROM ", 2)[1],
-                (rs, rowNum) -> new Laptop(
-                        rs.getLong("id"),
-                        rs.getString("name"),
-                        rs.getString("type"),
-                        rs.getDouble("price"),
-                        rs.getString("cpu"),
-                        rs.getString("gpu"),
-                        rs.getString("ram"),
-                        rs.getString("ssd"),
-                        rs.getString("description")
-                )
-        );
+
+        try {
+            return jdbcTemplate.query(sqlClean, (rs, rowNum) -> mapRowToLaptopDynamic(rs));
+        } catch (Exception e) {
+            throw new RuntimeException("Error executing query: " + e.getMessage());
+        }
     }
 
-    // Phương thức lọc câu SQL hợp lệ
+    private Laptop mapRowToLaptopDynamic(ResultSet rs) throws SQLException {
+        Laptop laptop = new Laptop();
+        ResultSetMetaData metaData = rs.getMetaData();
+        int columnCount = metaData.getColumnCount();
+
+        for (int i = 1; i <= columnCount; i++) {
+            String columnName = metaData.getColumnName(i).toLowerCase();
+            try {
+                // Lấy field từ model Laptop dựa trên tên cột
+                Field field = findField(Laptop.class, columnName);
+                if (field != null) {
+                    field.setAccessible(true);
+                    Object value = getValueByType(rs, i, field.getType());
+                    field.set(laptop, value);
+                }
+            } catch (Exception e) {
+                System.out.println("Could not map column: " + columnName);
+            }
+        }
+        return laptop;
+    }
+
+    private Field findField(Class<?> clazz, String fieldName) {
+        // Tìm kiếm field trong class và superclass
+        while (clazz != null) {
+            for (Field field : clazz.getDeclaredFields()) {
+                if (field.getName().equalsIgnoreCase(fieldName)) {
+                    return field;
+                }
+            }
+            clazz = clazz.getSuperclass();
+        }
+        return null;
+    }
+
+    private Object getValueByType(ResultSet rs, int index, Class<?> type) throws SQLException {
+        if (type.equals(Long.class) || type.equals(long.class)) {
+            return rs.getLong(index);
+        } else if (type.equals(Integer.class) || type.equals(int.class)) {
+            return rs.getInt(index);
+        } else if (type.equals(Double.class) || type.equals(double.class)) {
+            return rs.getDouble(index);
+        } else if (type.equals(Float.class) || type.equals(float.class)) {
+            return rs.getFloat(index);
+        } else if (type.equals(Boolean.class) || type.equals(boolean.class)) {
+            return rs.getBoolean(index);
+        } else {
+            return rs.getString(index);
+        }
+    }
+
     private String extractSqlQuery(String input) {
-        int thirdQuoteIndex = findNthOccurrence(input, '"', 3);
-        if (thirdQuoteIndex == -1) {
-            return "Invalid SQL query format";
+        try {
+            int thirdQuoteIndex = findNthOccurrence(input, '"', 3);
+            int fourthQuoteIndex = findNthOccurrence(input, '"', 4);
+
+            if (thirdQuoteIndex == -1 || fourthQuoteIndex == -1) {
+                throw new IllegalArgumentException("Invalid SQL query format");
+            }
+
+            String query = input.substring(thirdQuoteIndex + 1, fourthQuoteIndex).trim();
+            System.out.println("Extracted query: " + query);
+            return query;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error extracting SQL query: " + e.getMessage());
         }
-        int semicolonIndex = input.indexOf(";", thirdQuoteIndex);
-        if (semicolonIndex == -1) {
-            return "No semicolon found after third quote";
-        }
-        return input.substring(thirdQuoteIndex + 1, semicolonIndex).trim();
     }
 
-    // Phương thức tìm chỉ mục của dấu ký tự nth trong chuỗi
+    private boolean isValidQuery(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return false;
+        }
+
+        String upperQuery = query.toUpperCase().trim();
+        
+        if (!upperQuery.startsWith("SELECT")) {
+            System.out.println("Query must start with SELECT");
+            return false;
+        }
+
+        String[] unsafeKeywords = {
+            "DELETE", "DROP", "INSERT", "UPDATE", "TRUNCATE", 
+            "ALTER", "CREATE", "RENAME", "REPLACE"
+        };
+
+        for (String keyword : unsafeKeywords) {
+            if (upperQuery.contains(keyword)) {
+                System.out.println("Query contains unsafe keyword: " + keyword);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private int findNthOccurrence(String str, char c, int n) {
         int pos = -1;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n && pos < str.length(); i++) {
             pos = str.indexOf(c, pos + 1);
             if (pos == -1) {
+                System.out.println("Could not find occurrence " + n + " of character '" + c + "'");
                 return -1;
             }
         }
         return pos;
     }
-
-    // Phương thức lọc câu SQL hợp lệ từ dấu " thứ 3 đến dấu " thứ 4
-    private String extractSqlQuery1(String input) {
-        // Tìm vị trí của dấu " thứ 3
-        int thirdQuoteIndex = findNthOccurrence1(input, '"', 3);
-        if (thirdQuoteIndex == -1) {
-            return "Invalid SQL query format: No third quote found";
-        }
-
-        // Tìm vị trí của dấu " thứ 4
-        int fourthQuoteIndex = findNthOccurrence1(input, '"', 4);
-        if (fourthQuoteIndex == -1) {
-            return "Invalid SQL query format: No fourth quote found";
-        }
-
-        // Trả về chuỗi từ dấu " thứ 3 đến dấu " thứ 4
-        return input.substring(thirdQuoteIndex + 1, fourthQuoteIndex).trim();
-    }
-
-    // Phương thức tìm chỉ mục của dấu ký tự nth trong chuỗi
-    private int findNthOccurrence1(String str, char c, int n) {
-        int pos = -1;
-        for (int i = 0; i < n; i++) {
-            pos = str.indexOf(c, pos + 1);
-            if (pos == -1) {
-                return -1;
-            }
-        }
-        return pos;
-    }
-
 }
-
