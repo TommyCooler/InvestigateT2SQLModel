@@ -8,7 +8,7 @@ import {
   LaptopOutlined,
   ShopOutlined,
   SearchOutlined,
-  TranslationOutlined
+  FilterOutlined
 } from "@ant-design/icons";
 import "./Search.scss";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -17,6 +17,7 @@ export default function Search() {
   // States for data management
   const [keyword, setKeyword] = useState("");
   const [results, setResults] = useState([]);
+  const [filteredResults, setFilteredResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -26,6 +27,19 @@ export default function Search() {
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Filter states
+  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
+  const [selectedType, setSelectedType] = useState("");
+  const [selectedGpu, setSelectedGpu] = useState("");
+  const [selectedCpu, setSelectedCpu] = useState("");
+  const [selectedRam, setSelectedRam] = useState("");
+  
+  // Filter options
+  const [types, setTypes] = useState([]);
+  const [gpus, setGpus] = useState([]);
+  const [cpus, setCpus] = useState([]);
+  const [rams, setRams] = useState([]);
 
   // Router hooks
   const navigate = useNavigate();
@@ -46,6 +60,7 @@ export default function Search() {
     setKeyword("");
     setResults([]);
     setCurrentPage(1);
+    resetFilters();
   };
 
   // Authentication handlers
@@ -61,7 +76,7 @@ export default function Search() {
     window.location.reload();
   };
 
-  // Basic search operation
+  // Search operation
   const handleSearch = async () => {
     if (!keyword.trim()) {
       message.warning("Please enter a search keyword");
@@ -85,7 +100,6 @@ export default function Search() {
       }
 
       const data = await response.json();
-      console.log('Search results:', data);
       setResults(data);
       setTotalItems(data.length);
       if (data.length === 0) {
@@ -94,68 +108,6 @@ export default function Search() {
     } catch (err) {
       console.error('Search error:', err);
       setError('Failed to perform search. Please try again.');
-      message.error('Search failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Natural Language Query search with translation
-  const handleNLQSearch = async () => {
-    if (!keyword.trim()) {
-      message.warning("Please enter a search term");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // First translate the query
-      const translateResponse = await fetch('http://localhost:8080/googleTranslate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          vietnameseText: keyword,
-          targetLanguage: 'en'
-        })
-      });
-
-      if (!translateResponse.ok) {
-        throw new Error('Translation failed');
-      }
-
-      const translateData = await translateResponse.json();
-      console.log('Translated query:', translateData);
-
-      // Then search using the translated query
-      const searchResponse = await fetch('http://localhost:8080/searchByNLQ', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          vietnameseText: keyword,
-          targetLanguage: 'en'
-        })
-      });
-
-      if (!searchResponse.ok) {
-        throw new Error('Search failed');
-      }
-
-      const searchData = await searchResponse.json();
-      setResults(searchData);
-      setTotalItems(searchData.length);
-
-      if (searchData.length === 0) {
-        message.info("No results found");
-      }
-    } catch (err) {
-      console.error('NLQ Search error:', err);
-      setError('Search failed. Please try again.');
       message.error('Search failed. Please try again.');
     } finally {
       setLoading(false);
@@ -181,7 +133,6 @@ export default function Search() {
       }
 
       const data = await response.json();
-      console.log('Fetched laptops:', data);
       setResults(data);
       setTotalItems(data.length);
     } catch (err) {
@@ -198,7 +149,7 @@ export default function Search() {
     fetchAllLaptops();
   }, []);
 
-  // Set up columns when data is loaded
+  // Set up columns and filter options when data is loaded
   useEffect(() => {
     if (results && results.length > 0) {
       const dynamicColumns = Object.keys(results[0]).map((key) => ({
@@ -206,12 +157,72 @@ export default function Search() {
         accessorKey: key,
       }));
       setColumns(dynamicColumns);
+      
+      // Get unique values for filters
+      const uniqueTypes = [...new Set(results.map(item => item.type))].filter(Boolean);
+      const uniqueGpus = [...new Set(results.map(item => item.gpu))].filter(Boolean);
+      const uniqueCpus = [...new Set(results.map(item => item.cpu))].filter(Boolean);
+      const uniqueRams = [...new Set(results.map(item => item.ram))].filter(Boolean);
+      
+      setTypes(uniqueTypes);
+      setGpus(uniqueGpus);
+      setCpus(uniqueCpus);
+      setRams(uniqueRams);
+      setFilteredResults(results);
     }
   }, [results]);
 
+  // Apply filters
+  useEffect(() => {
+    let filtered = [...results];
+
+    // Apply price filter
+    if (priceRange.min !== "" || priceRange.max !== "") {
+      filtered = filtered.filter(item => {
+        const price = Number(item.price);
+        const min = priceRange.min === "" ? 0 : Number(priceRange.min);
+        const max = priceRange.max === "" ? Infinity : Number(priceRange.max);
+        return price >= min && price <= max;
+      });
+    }
+
+    // Apply type filter
+    if (selectedType) {
+      filtered = filtered.filter(item => item.type === selectedType);
+    }
+
+    // Apply GPU filter
+    if (selectedGpu) {
+      filtered = filtered.filter(item => item.gpu === selectedGpu);
+    }
+
+    // Apply CPU filter
+    if (selectedCpu) {
+      filtered = filtered.filter(item => item.cpu === selectedCpu);
+    }
+
+    // Apply RAM filter
+    if (selectedRam) {
+      filtered = filtered.filter(item => item.ram === selectedRam);
+    }
+
+    setFilteredResults(filtered);
+    setTotalItems(filtered.length);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [results, priceRange, selectedType, selectedGpu, selectedCpu, selectedRam]);
+
+  // Reset filters
+  const resetFilters = () => {
+    setPriceRange({ min: "", max: "" });
+    setSelectedType("");
+    setSelectedGpu("");
+    setSelectedCpu("");
+    setSelectedRam("");
+  };
+
   // Pagination logic
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const currentData = results.slice(
+  const currentData = filteredResults.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -302,29 +313,17 @@ export default function Search() {
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleNLQSearch()}
-                  placeholder="Tìm kiếm laptop (có thể dùng tiếng Việt)..."
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder="Search laptops..."
                 />
-                <div className="search-buttons">
-                  <Button
-                    icon={<SearchOutlined />}
-                    onClick={handleSearch}
-                    loading={loading}
-                    className="search-button"
-                    title="Basic Search"
-                  >
-                    Search
-                  </Button>
-                  <Button
-                    icon={<TranslationOutlined />}
-                    onClick={handleNLQSearch}
-                    loading={loading}
-                    className="nlq-search-button"
-                    title="Search in Vietnamese"
-                  >
-                    VN Search
-                  </Button>
-                </div>
+                <Button
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                  loading={loading}
+                  className="search-button"
+                >
+                  Search
+                </Button>
               </div>
             </div>
 
@@ -341,6 +340,96 @@ export default function Search() {
                 <span className="value">{totalItems}</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Filters Section */}
+        <div className="filters-section">
+          <div className="filter-row">
+            <div className="filter-cell">
+              <label>Price Range</label>
+              <div className="price-inputs">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                  className="price-input"
+                />
+                <span>-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                  className="price-input"
+                />
+              </div>
+            </div>
+
+            <div className="filter-cell">
+              <label>Type</label>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="filter-select"
+              >
+                <option value="">All Types</option>
+                {types.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-cell">
+              <label>GPU</label>
+              <select
+                value={selectedGpu}
+                onChange={(e) => setSelectedGpu(e.target.value)}
+                className="filter-select"
+              >
+                <option value="">All GPUs</option>
+                {gpus.map((gpu) => (
+                  <option key={gpu} value={gpu}>{gpu}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-cell">
+              <label>CPU</label>
+              <select
+                value={selectedCpu}
+                onChange={(e) => setSelectedCpu(e.target.value)}
+                className="filter-select"
+              >
+                <option value="">All CPUs</option>
+                {cpus.map((cpu) => (
+                  <option key={cpu} value={cpu}>{cpu}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-cell">
+              <label>RAM</label>
+              <select
+                value={selectedRam}
+                onChange={(e) => setSelectedRam(e.target.value)}
+                className="filter-select"
+              >
+                <option value="">All RAM</option>
+                {rams.map((ram) => (
+                  <option key={ram} value={ram}>{ram}</option>
+                ))}
+              </select>
+            </div>
+
+            <Button 
+              onClick={resetFilters}
+              icon={<FilterOutlined />}
+              className="reset-filters-button"
+            >
+              Reset Filters
+            </Button>
           </div>
         </div>
 
@@ -368,7 +457,7 @@ export default function Search() {
               <div className="spinner" />
               <p>Loading data...</p>
             </div>
-          ) : results.length === 0 ? (
+          ) : filteredResults.length === 0 ? (
             <div className="empty-state">
               <p className="title">No laptops found</p>
               <p className="subtitle">Try adjusting your search criteria</p>
@@ -381,96 +470,96 @@ export default function Search() {
                     {columns.map((column) => (
                       <th key={column.accessorKey}>{column.header}</th>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentData.map((row, rowIndex) => (
-                    <tr
-                      key={row.id || rowIndex}
-                      onClick={() => handleRowClick(row)}
-                    >
-                      {columns.map((column) => (
-                        <td key={column.accessorKey}>
-                          {column.accessorKey === "price" ? (
-                            <span className="price-value">
-                              ${Number(row[column.accessorKey]).toFixed(2)}
-                            </span>
-                          ) : (
-                            row[column.accessorKey]
-                          )}
-                        </td>
-                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {currentData.map((row, rowIndex) => (
+                      <tr
+                        key={row.id || rowIndex}
+                        onClick={() => handleRowClick(row)}
+                      >
+                        {columns.map((column) => (
+                          <td key={column.accessorKey}>
+                            {column.accessorKey === "price" ? (
+                              <span className="price-value">
+                                ${Number(row[column.accessorKey]).toFixed(2)}
+                              </span>
+                            ) : (
+                              row[column.accessorKey]
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+  
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination-controls">
+              <Button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="pagination-button"
+              >
+                Prev
+              </Button>
+              <span className="page-info">
+                {currentPage} of {totalPages}
+              </span>
+              <Button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="pagination-button"
+              >
+                Next
+              </Button>
             </div>
           )}
         </div>
-
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="pagination-controls">
-            <Button
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="pagination-button"
-            >
-              Prev
-            </Button>
-            <span className="page-info">
-              {currentPage} of {totalPages}
-            </span>
-            <Button
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="pagination-button"
-            >
-              Next
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Detail Modal */}
-      {showModal && selectedProduct && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-body">
-              <div className="modal-header">
-                <h2>{selectedProduct.name}</h2>
-                <button onClick={() => setShowModal(false)} className="close-button">
-                  ✕
-                </button>
-              </div>
-              <div className="specs-grid">
-                <div className="spec-item">
-                  <span className="spec-label">Price</span>
-                  <p className="price-value">
-                    ${Number(selectedProduct.price).toFixed(2)}
-                  </p>
+  
+        {/* Detail Modal */}
+        {showModal && selectedProduct && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-body">
+                <div className="modal-header">
+                  <h2>{selectedProduct.name}</h2>
+                  <button onClick={() => setShowModal(false)} className="close-button">
+                    ✕
+                  </button>
                 </div>
-                <div className="spec-item">
-                  <span className="spec-label">Type</span>
-                  <p className="spec-value">{selectedProduct.type}</p>
-                </div>
-                <div className="spec-item">
-                  <span className="spec-label">CPU</span>
-                  <p className="spec-value">{selectedProduct.cpu}</p>
-                </div>
-                <div className="spec-item">
-                  <span className="spec-label">GPU</span>
-                  <p className="spec-value">{selectedProduct.gpu}</p>
-                </div>
-                <div className="spec-item">
-                  <span className="spec-label">RAM</span>
-                  <p className="spec-value">{selectedProduct.ram}</p>
+                <div className="specs-grid">
+                  <div className="spec-item">
+                    <span className="spec-label">Price</span>
+                    <p className="price-value">
+                      ${Number(selectedProduct.price).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="spec-item">
+                    <span className="spec-label">Type</span>
+                    <p className="spec-value">{selectedProduct.type}</p>
+                  </div>
+                  <div className="spec-item">
+                    <span className="spec-label">CPU</span>
+                    <p className="spec-value">{selectedProduct.cpu}</p>
+                  </div>
+                  <div className="spec-item">
+                    <span className="spec-label">GPU</span>
+                    <p className="spec-value">{selectedProduct.gpu}</p>
+                  </div>
+                  <div className="spec-item">
+                    <span className="spec-label">RAM</span>
+                    <p className="spec-value">{selectedProduct.ram}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        )}
+      </div>
+    );
+  }

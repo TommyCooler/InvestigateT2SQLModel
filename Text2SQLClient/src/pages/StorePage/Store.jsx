@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { 
   Button, 
   message, 
-  Card, 
   Input, 
   Typography,
   Select
@@ -22,8 +21,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Store() {
   // States for data management
-  const [keyword, setKeyword] = useState("");
   const [results, setResults] = useState([]);
+  const [filteredResults, setFilteredResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedStore, setSelectedStore] = useState(null);
@@ -33,7 +32,16 @@ export default function Store() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Định nghĩa cứng columns cho Store
+  // Search and Filter states
+  const [nameSearch, setNameSearch] = useState("");
+  const [selectedAddress, setSelectedAddress] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [addresses, setAddresses] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [districts, setDistricts] = useState([]);
+
+  // Định nghĩa columns cho Store
   const columns = [
     { header: "ID", accessorKey: "id" },
     { header: "Store Name", accessorKey: "name" },
@@ -41,13 +49,6 @@ export default function Store() {
     { header: "City", accessorKey: "city" },
     { header: "District", accessorKey: "district" }
   ];
-
-  // Filter states
-  const [cityFilter, setCityFilter] = useState(null);
-  const [districtFilter, setDistrictFilter] = useState(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [cities, setCities] = useState([]);
-  const [districts, setDistricts] = useState([]);
 
   // Router hooks
   const navigate = useNavigate();
@@ -65,8 +66,7 @@ export default function Store() {
   const handleNavigation = (path) => {
     setActiveTab(path);
     navigate(`/${path}`);
-    setKeyword("");
-    setResults([]);
+    resetFilters();
     setCurrentPage(1);
   };
 
@@ -83,56 +83,13 @@ export default function Store() {
     window.location.reload();
   };
 
-  // Basic search operation
-  const handleSearch = async () => {
-    if (!keyword.trim()) {
-      message.warning("Please enter a search keyword");
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetch(`http://localhost:8080/store/search?keyword=${encodeURIComponent(keyword)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Search failed');
-      }
-
-      const data = await response.json();
-      console.log('Search results:', data);
-      setResults(data);
-      setTotalItems(data.length);
-      if (data.length === 0) {
-        message.info("No stores found for your search");
-      }
-    } catch (err) {
-      console.error('Search error:', err);
-      setError('Failed to perform search. Please try again.');
-      message.error('Search failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Fetch all stores
-  const fetchAllStores = async (filters = {}) => {
+  const fetchAllStores = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      let url = 'http://localhost:8080/store/all?';
-      if (filters.city) url += `city=${filters.city}&`;
-      if (filters.district) url += `district=${filters.district}`;
-
-      const response = await fetch(url, {
+      const response = await fetch('http://localhost:8080/store/all', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -145,16 +102,18 @@ export default function Store() {
       }
 
       const data = await response.json();
-      console.log('Fetched stores:', data);
       setResults(data);
       setTotalItems(data.length);
 
-      // Extract unique cities and districts for filters
-      const uniqueCities = [...new Set(data.map(store => store.city))];
+      // Extract unique values for filters
+      const uniqueAddresses = [...new Set(data.map(store => store.address))].filter(Boolean);
+      const uniqueCities = [...new Set(data.map(store => store.city))].filter(Boolean);
+      const uniqueDistricts = [...new Set(data.map(store => store.district))].filter(Boolean);
+      
+      setAddresses(uniqueAddresses);
       setCities(uniqueCities);
-
-      const uniqueDistricts = [...new Set(data.map(store => store.district))];
       setDistricts(uniqueDistricts);
+      setFilteredResults(data);
 
     } catch (err) {
       console.error('Fetch error:', err);
@@ -165,29 +124,53 @@ export default function Store() {
     }
   };
 
-  // Handle filter changes
-  const handleFilterChange = () => {
-    fetchAllStores({
-      city: cityFilter,
-      district: districtFilter
-    });
-  };
-
-  // Reset filters
-  const resetFilters = () => {
-    setCityFilter(null);
-    setDistrictFilter(null);
-    fetchAllStores();
-  };
-
   // Initial data fetch
   useEffect(() => {
     fetchAllStores();
   }, []);
 
+  // Apply filters
+  useEffect(() => {
+    let filtered = [...results];
+
+    // Filter by store name
+    if (nameSearch) {
+      filtered = filtered.filter(store => 
+        store.name.toLowerCase().includes(nameSearch.toLowerCase())
+      );
+    }
+
+    // Filter by address
+    if (selectedAddress) {
+      filtered = filtered.filter(store => store.address === selectedAddress);
+    }
+
+    // Filter by city
+    if (selectedCity) {
+      filtered = filtered.filter(store => store.city === selectedCity);
+    }
+
+    // Filter by district
+    if (selectedDistrict) {
+      filtered = filtered.filter(store => store.district === selectedDistrict);
+    }
+
+    setFilteredResults(filtered);
+    setTotalItems(filtered.length);
+    setCurrentPage(1);
+  }, [results, nameSearch, selectedAddress, selectedCity, selectedDistrict]);
+
+  // Reset filters
+  const resetFilters = () => {
+    setNameSearch("");
+    setSelectedAddress("");
+    setSelectedCity("");
+    setSelectedDistrict("");
+  };
+
   // Pagination logic
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const currentData = results.slice(
+  const currentData = filteredResults.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -199,7 +182,7 @@ export default function Store() {
   };
 
   return (
-    <div className="search-page">
+    <div className="store-page">
       {/* Navigation Header */}
       <div className="header">
         <div className="navigation-header">
@@ -269,87 +252,85 @@ export default function Store() {
 
       {/* Main Content */}
       <div className="main-content">
-        {/* Search and Filter Section */}
+        {/* Search Section */}
         <div className="search-section">
           <div className="search-container">
             <div className="search-input-wrapper">
               <div className="search-input-container">
                 <Input
-                  placeholder="Search stores..."
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  onPressEnter={handleSearch}
+                  placeholder="Search store name..."
+                  value={nameSearch}
+                  onChange={(e) => setNameSearch(e.target.value)}
                   prefix={<SearchOutlined />}
-                  suffix={
-                    <Button
-                      type="link"
-                      icon={<FilterOutlined />}
-                      onClick={() => setShowFilters(!showFilters)}
-                    />
-                  }
                 />
-                <Button
-                  type="primary"
-                  icon={<SearchOutlined />}
-                  onClick={handleSearch}
-                  loading={loading}
-                >
-                  Search
-                </Button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters Section */}
-        {showFilters && (
-          <div className="filter-section">
-            <Card title="Filters" className="filter-card">
-              <div className="city-filter">
-                <Typography.Title level={5}>City</Typography.Title>
-                <Select
-                  placeholder="Select city"
-                  value={cityFilter}
-                  onChange={(value) => setCityFilter(value)}
-                  allowClear
-                  style={{ width: '100%' }}
-                >
-                  {cities.map(city => (
-                    <Select.Option key={city} value={city}>
-                      {city}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
-              
-              <div className="district-filter">
-                <Typography.Title level={5}>District</Typography.Title>
-                <Select
-                  placeholder="Select district"
-                  value={districtFilter}
-                  onChange={(value) => setDistrictFilter(value)}
-                  allowClear
-                  style={{ width: '100%' }}
-                >
-                  {districts.map(district => (
-                    <Select.Option key={district} value={district}>
-                      {district}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
+        <div className="filters-section">
+          <div className="filter-row">
+            <div className="filter-cell">
+              <label>Address</label>
+              <Select
+                placeholder="Select address"
+                value={selectedAddress}
+                onChange={value => setSelectedAddress(value)}
+                className="filter-select"
+                allowClear
+              >
+                {addresses.map(address => (
+                  <Select.Option key={address} value={address}>
+                    {address}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
 
-              <div className="filter-actions">
-                <Button type="primary" onClick={handleFilterChange}>
-                  Apply Filters
-                </Button>
-                <Button onClick={resetFilters}>
-                  Reset Filters
-                </Button>
-              </div>
-            </Card>
+            <div className="filter-cell">
+              <label>City</label>
+              <Select
+                placeholder="Select city"
+                value={selectedCity}
+                onChange={value => setSelectedCity(value)}
+                className="filter-select"
+                allowClear
+              >
+                {cities.map(city => (
+                  <Select.Option key={city} value={city}>
+                    {city}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="filter-cell">
+              <label>District</label>
+              <Select
+                placeholder="Select district"
+                value={selectedDistrict}
+                onChange={value => setSelectedDistrict(value)}
+                className="filter-select"
+                allowClear
+              >
+                {districts.map(district => (
+                  <Select.Option key={district} value={district}>
+                    {district}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+
+            <Button 
+              onClick={resetFilters}
+              icon={<FilterOutlined />}
+              className="reset-filters-button"
+            >
+              Reset Filters
+            </Button>
           </div>
-        )}
+        </div>
 
         {/* Results Count */}
         <div className="results-count">
@@ -365,10 +346,10 @@ export default function Store() {
               <div className="spinner" />
               <p>Loading data...</p>
             </div>
-          ) : results.length === 0 ? (
+          ) : filteredResults.length === 0 ? (
             <div className="empty-state">
               <p className="title">No stores found</p>
-              <p className="subtitle">Try adjusting your search criteria</p>
+              <p className="subtitle">Try adjusting your filters</p>
             </div>
           ) : (
             <div className="table-container">
