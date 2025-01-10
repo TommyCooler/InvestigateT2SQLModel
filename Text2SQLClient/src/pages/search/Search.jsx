@@ -76,7 +76,6 @@ export default function Search() {
     window.location.reload();
   };
 
-  // Search operation
   const handleSearch = async () => {
     if (!keyword.trim()) {
       message.warning("Please enter a search keyword");
@@ -87,18 +86,32 @@ export default function Search() {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8080/search?keyword=${encodeURIComponent(keyword)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
+      const url = isVip 
+        ? 'http://localhost:8080/searchByNLQ'
+        : `http://localhost:8080/search?keyword=${encodeURIComponent(keyword)}`;
+      const options = isVip 
+        ? {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ vietnameseText: keyword })
+          }
+        : {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          };
+  
+      const response = await fetch(url, options);
+  
       if (!response.ok) {
         throw new Error('Search failed');
       }
-
+  
       const data = await response.json();
       setResults(data);
       setTotalItems(data.length);
@@ -112,7 +125,7 @@ export default function Search() {
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   // Fetch all laptops
   const fetchAllLaptops = async () => {
