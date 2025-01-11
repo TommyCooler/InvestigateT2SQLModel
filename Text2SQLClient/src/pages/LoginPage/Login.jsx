@@ -31,76 +31,79 @@ const Login = () => {
       // Log request data for debugging
       console.log('Login attempt with:', {
         username: values.username,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
+  
       const response = await axios.post(
         "http://localhost:8080/user/login",
         {
           username: values.username,
-          password: values.password
+          password: values.password,
         },
         {
           headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            "Content-Type": "application/json",
+            Accept: "application/json",
           },
-          timeout: 5000 // 5 seconds timeout
+          timeout: 5000, // 5 seconds timeout
         }
       );
-
+  
       // Log successful response
       console.log('Login response:', {
         status: response.status,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
+  
       if (response.data) {
         // Store user data
         localStorage.setItem("user", JSON.stringify(response.data));
         localStorage.setItem("isVip", response.data.vip);
-        
+  
         // Show success message
         message.success({
           content: response.data.message || "Login successful!",
           duration: 2,
           style: {
-            marginTop: '20vh',
+            marginTop: "20vh",
           },
         });
-
+  
         // Clear form
         form.resetFields();
-
-        // Navigate to home page
-        navigate("/");
+  
+        // Navigate based on VIP status
+        if (response.data.vip) {
+          navigate("/vip-search"); // Redirect to VipSearch page
+        } else {
+          navigate("/"); // Redirect to Home page
+        }
       }
     } catch (error) {
-      // Log error details
+      // Handle errors
       console.error('Login error:', {
         message: error.message,
         status: error.response?.status,
         data: error.response?.data,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
-      // Show appropriate error message
+  
       if (error.code === "ECONNABORTED") {
         message.error("Connection timeout. Please try again.");
       } else if (error.response) {
-        // Server responded with error
-        message.error(error.response.data?.message || "Login failed. Please check your credentials!");
+        message.error(
+          error.response.data?.message || "Login failed. Please check your credentials!"
+        );
       } else if (error.request) {
-        // Request made but no response
         message.error("No response from server. Please try again later.");
       } else {
-        // Other errors
         message.error("An error occurred. Please try again.");
       }
     } finally {
       setLoading(false);
     }
   };
+  
 
   // Handle form submission failure
   const onFinishFailed = (errorInfo) => {
