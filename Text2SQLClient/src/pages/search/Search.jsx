@@ -89,6 +89,7 @@ export default function Search() {
       const url = isVip 
         ? 'http://localhost:8080/searchByNLQ'
         : `http://localhost:8080/search?keyword=${encodeURIComponent(keyword)}`;
+
       const options = isVip 
         ? {
             method: 'POST',
@@ -105,7 +106,7 @@ export default function Search() {
               'Accept': 'application/json'
             }
           };
-  
+      console.log(isVip)
       const response = await fetch(url, options);
   
       if (!response.ok) {
