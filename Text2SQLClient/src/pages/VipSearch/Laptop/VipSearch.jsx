@@ -62,12 +62,13 @@ export default function VipSearch() {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8080/search?keyword=${encodeURIComponent(keyword)}`, {
-        method: 'GET',
+      const response = await fetch('http://localhost:8080/searchByNLQ', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-        }
+        },
+        body: JSON.stringify({ vietnameseText: keyword })
       });
 
       if (!response.ok) {
